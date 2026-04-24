@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { useQuery } from "react-query"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
 import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
 import {
   Toast,
@@ -57,6 +59,43 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
       refetchOnMount: true
     }
   )
+
+  const renderChatMessageText = (content: string) => {
+    if (typeof content !== "string") return content;
+
+    const parts = content.split(/(```[\w]*(?:[\s\n]+)[\s\S]*?```)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith("```")) {
+        const match = part.match(/```([\w]*)(?:[\s\n]+)([\s\S]*?)```/);
+        if (match) {
+          const lang = match[1] || "java";
+          const code = match[2];
+          return (
+            <div key={index} className="my-2 w-full text-left bg-transparent">
+              <SyntaxHighlighter
+                showLineNumbers
+                language={lang.toLowerCase()}
+                style={dracula}
+                customStyle={{
+                  maxWidth: "100%",
+                  margin: 0,
+                  padding: "0.5rem",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-all",
+                  fontSize: "11px",
+                  borderRadius: "0.375rem"
+                }}
+                wrapLongLines={true}
+              >
+                {code.trim()}
+              </SyntaxHighlighter>
+            </div>
+          );
+        }
+      }
+      return <span key={index} className="whitespace-pre-wrap">{part}</span>;
+    });
+  };
 
   const showToast = (
     title: string,
@@ -219,10 +258,9 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
       ref={barRef}
       style={{
         position: "relative",
-        width: "100%",
         pointerEvents: "auto"
       }}
-      className="select-none"
+      className={`select-none ${isChatOpen ? "w-[600px]" : "w-max"}`}
     >
       <div className="bg-transparent w-full">
         <div className="px-2 py-1">
@@ -276,7 +314,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
                       }`}
                       style={{ wordBreak: "break-word", lineHeight: "1.4" }}
                     >
-                      {msg.text}
+                      {msg.role === "user" ? msg.text : renderChatMessageText(msg.text)}
                     </div>
                   </div>
                 ))

@@ -6,7 +6,7 @@ import path from "node:path"
 const isDev = process.env.NODE_ENV === "development"
 
 const startUrl = isDev
-  ? "http://localhost:5180"
+  ? "http://127.0.0.1:5180"
   : `file://${path.join(__dirname, "../dist/index.html")}`
 
 export class WindowHelper {
@@ -115,9 +115,12 @@ export class WindowHelper {
       }
       // Keep window focusable on Linux for proper interaction
       this.mainWindow.setFocusable(true)
-    } 
+    }
+    if (process.platform === "win32") {
+      this.mainWindow.setAlwaysOnTop(true, "screen-saver")
+    }
     this.mainWindow.setSkipTaskbar(true)
-    this.mainWindow.setAlwaysOnTop(true)
+    this.mainWindow.setAlwaysOnTop(true, "screen-saver")
 
     this.mainWindow.loadURL(startUrl).catch((err) => {
       console.error("Failed to load URL:", err)
@@ -130,7 +133,8 @@ export class WindowHelper {
         this.centerWindow()
         this.mainWindow.show()
         this.mainWindow.focus()
-        this.mainWindow.setAlwaysOnTop(true)
+        this.mainWindow.setAlwaysOnTop(true, "screen-saver")
+        this.mainWindow.setContentProtection(true)
         console.log("Window is now visible and centered")
       }
     })
@@ -209,7 +213,7 @@ export class WindowHelper {
     }
 
     this.mainWindow.showInactive()
-
+    this.mainWindow.setContentProtection(true)
     this.isWindowVisible = true
   }
 
@@ -263,6 +267,7 @@ export class WindowHelper {
     this.mainWindow.show()
     this.mainWindow.focus()
     this.mainWindow.setAlwaysOnTop(true)
+    this.mainWindow.setContentProtection(true)
     this.isWindowVisible = true
     
     console.log(`Window centered and shown`)

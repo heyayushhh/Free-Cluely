@@ -27,24 +27,62 @@ export const ContentSection = ({
   title: string
   content: React.ReactNode
   isLoading: boolean
-}) => (
-  <div className="space-y-2">
-    <h2 className="text-[13px] font-medium text-white tracking-wide">
-      {title}
-    </h2>
-    {isLoading ? (
-      <div className="mt-4 flex">
-        <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-          Extracting problem statement...
-        </p>
-      </div>
-    ) : (
-      <div className="text-[13px] leading-[1.4] text-gray-100 max-w-[600px]">
-        {content}
-      </div>
-    )}
-  </div>
-)
+}) => {
+  const renderContent = () => {
+    if (typeof content !== "string") return content;
+
+    const parts = content.split(/(```[\w]*(?:[\s\n]+)[\s\S]*?```)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith("\`\`\`")) {
+        const match = part.match(/```([\w]*)(?:[\s\n]+)([\s\S]*?)```/);
+        if (match) {
+          const lang = match[1] || "java";
+          const code = match[2];
+          return (
+            <div key={index} className="my-2 w-full">
+              <SyntaxHighlighter
+                showLineNumbers
+                language={lang.toLowerCase()}
+                style={dracula}
+                customStyle={{
+                  maxWidth: "100%",
+                  margin: 0,
+                  padding: "1rem",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-all",
+                  borderRadius: "0.5rem"
+                }}
+                wrapLongLines={true}
+              >
+                {code.trim()}
+              </SyntaxHighlighter>
+            </div>
+          );
+        }
+      }
+      return <span key={index} className="whitespace-pre-wrap">{part}</span>;
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <h2 className="text-[13px] font-medium text-white tracking-wide">
+        {title}
+      </h2>
+      {isLoading ? (
+        <div className="mt-4 flex">
+          <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+            Extracting problem statement...
+          </p>
+        </div>
+      ) : (
+        <div className="text-[13px] leading-[1.4] text-gray-100 max-w-[600px]">
+          {renderContent()}
+        </div>
+      )}
+    </div>
+  );
+}
 const SolutionSection = ({
   title,
   content,
@@ -70,7 +108,7 @@ const SolutionSection = ({
       <div className="w-full">
         <SyntaxHighlighter
           showLineNumbers
-          language="python"
+          language="java"
           style={dracula}
           customStyle={{
             maxWidth: "100%",
@@ -453,7 +491,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
           />
         </>
       ) : (
-        <div ref={contentRef} className="relative space-y-3 px-4 py-3">
+        <div ref={contentRef} className="relative space-y-3 px-4 py-3 w-[600px]">
           <Toast
             open={toastOpen}
             onOpenChange={setToastOpen}

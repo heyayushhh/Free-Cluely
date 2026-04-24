@@ -8,7 +8,7 @@ interface OllamaResponse {
 
 export class LLMHelper {
   private model: GenerativeModel | null = null
-  private readonly systemPrompt = `You are Wingman AI, a helpful, proactive assistant for any kind of problem or situation (not just coding). For any user input, analyze the situation, provide a clear problem statement, relevant context, and suggest several possible responses or actions the user could take next. Always explain your reasoning. Present your suggestions as a list of options or next steps.`
+  private readonly systemPrompt = `You are Wingman AI, a helpful, proactive assistant. For normal questions, answer naturally. \n\nCRITICAL INSTRUCTION FOR CODING TASKS:\nIf the user presents a programming problem, coding dashboard, or code snippet (via text or image), you MUST adhere to these absolute rules:\n1. Provide the PERFECT, COMPLETE solution STRICTLY in Java.\n2. DO NOT include any conversational text, explanations, step-by-step breakdowns, or suggestions. \n3. Your ENTIRE answer MUST simply be the Java code wrapped in a Markdown code block (e.g., \`\`\`java\\n[your code]\\n\`\`\`). Output NOTHING ELSE outside this code box.`
   private useOllama: boolean = false
   private ollamaModel: string = "llama3.2"
   private ollamaUrl: string = "http://localhost:11434"
@@ -25,7 +25,7 @@ export class LLMHelper {
       this.initializeOllamaModel()
     } else if (apiKey) {
       const genAI = new GoogleGenerativeAI(apiKey)
-      this.model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+      this.model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
       console.log("[LLMHelper] Using Google Gemini")
     } else {
       throw new Error("Either provide Gemini API key or enable Ollama mode")
@@ -145,7 +145,7 @@ export class LLMHelper {
   public async generateSolution(problemInfo: any) {
     const prompt = `${this.systemPrompt}\n\nGiven this problem or situation:\n${JSON.stringify(problemInfo, null, 2)}\n\nPlease provide your response in the following JSON format:\n{
   "solution": {
-    "code": "The code or main answer here.",
+    "code": "The Java code wrapped in \\n\`\`\`java\\n ... \\n\`\`\`\\n markdown here.",
     "problem_statement": "Restate the problem or situation.",
     "context": "Relevant background/context.",
     "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
@@ -174,7 +174,7 @@ export class LLMHelper {
       
       const prompt = `${this.systemPrompt}\n\nYou are a wingman. Given:\n1. The original problem or situation: ${JSON.stringify(problemInfo, null, 2)}\n2. The current response or approach: ${currentCode}\n3. The debug information in the provided images\n\nPlease analyze the debug information and provide feedback in this JSON format:\n{
   "solution": {
-    "code": "The code or main answer here.",
+    "code": "The corrected Java code wrapped in \\n\`\`\`java\\n ... \\n\`\`\`\\n markdown here.",
     "problem_statement": "Restate the problem or situation.",
     "context": "Relevant background/context.",
     "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
@@ -242,7 +242,7 @@ export class LLMHelper {
           mimeType: "image/png"
         }
       };
-      const prompt = `${this.systemPrompt}\n\nDescribe the content of this image in a short, concise answer. In addition to your main answer, suggest several possible actions or responses the user could take next based on the image. Do not return a structured JSON object, just answer naturally as you would to a user. Be concise and brief.`;
+      const prompt = `${this.systemPrompt}\n\nIf this image contains a programming problem, code, or coding dashboard (LeetCode, HackerRank, IDE, etc.), output ONLY the requested Java code solution as instructed above. If it is NOT a coding problem, describe the image briefly and naturally suggest several possible next actions. Do not return a JSON object.\n\nCRITICAL REMINDER: If outputting code, you MUST wrap it in \`\`\`java\n[code]\n\`\`\` markdown blocks! NEVER output raw code text without the markdown backticks!`;
       const result = await this.model.generateContent([prompt, imagePart]);
       const response = await result.response;
       const text = response.text();
@@ -255,10 +255,11 @@ export class LLMHelper {
 
   public async chatWithGemini(message: string): Promise<string> {
     try {
+      const prompt = `${this.systemPrompt}\n\nUser input: ${message}\n\nCRITICAL REMINDER: If you are outputting code, you MUST wrap your Java code in \`\`\`java\n[code]\n\`\`\` markdown blocks! NEVER output raw code text without the markdown backticks!`;
       if (this.useOllama) {
-        return this.callOllama(message);
+        return this.callOllama(prompt);
       } else if (this.model) {
-        const result = await this.model.generateContent(message);
+        const result = await this.model.generateContent(prompt);
         const response = await result.response;
         return response.text();
       } else {
@@ -298,7 +299,7 @@ export class LLMHelper {
   }
 
   public getCurrentModel(): string {
-    return this.useOllama ? this.ollamaModel : "gemini-2.0-flash";
+    return this.useOllama ? this.ollamaModel : "gemini-2.5-flash";
   }
 
   public async switchToOllama(model?: string, url?: string): Promise<void> {
@@ -318,7 +319,7 @@ export class LLMHelper {
   public async switchToGemini(apiKey?: string): Promise<void> {
     if (apiKey) {
       const genAI = new GoogleGenerativeAI(apiKey);
-      this.model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      this.model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     }
     
     if (!this.model && !apiKey) {
